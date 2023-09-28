@@ -1,0 +1,97 @@
+#define BUTTON_PIN 8
+#define DEBOUNCE_TIME 40
+
+unsigned long int tiempo_actual;  //Se necesita de una variable larga, puesto que está será igual a "millis"
+char i = 0;              //la cual puede escalar mucho en su valor si se deja correr el programa
+ 
+void debounceFSM_inic(); 
+void debounceFSM_act();
+void buttonpressed();       
+
+typedef enum{
+  BUTTON_UP,    
+  BUTTON_FALLING, 
+  BUTTON_DOWN,    
+  BUTTON_RISING,  
+} debounceState_t;
+
+debounceState_t currentState; 
+
+
+char numero[10] = {
+  B00111111,
+  B00000110,
+  B01011011,
+  B01001111,
+  B01100110,
+  B01101101,
+  B01111101,
+  B00000111,
+  B01111111,
+  B01100111,
+};
+
+
+
+void setup(){
+
+  pinMode(BUTTON_PIN, INPUT);
+  tiempo_actual=millis();
+  debounceFSM_inic();
+  DDRD = B11111111; // (G F E D C B A), los pines del puerto D se definen como salidas  
+}
+
+void loop()
+{
+  debounceFSM_act();
+}
+
+void debounceFSM_inic(){
+  currentState = BUTTON_DOWN; 
+}
+
+
+void debounceFSM_update(void) {
+  switch (currentState) {
+    case BUTTON_UP:
+      tiempo_actual = millis();
+      if(!(digitalRead(BUTTON_PIN))){
+        currentState = BUTTON_FALLING;
+      }else currentState = BUTTON_UP;
+    break;
+    
+    case BUTTON_FALLING:
+      if(millis() - tiempo_actual >= DEBOUNCE_TIME){
+        tiempo_actual = millis();
+        if (!digitalRead(BUTTON_PIN)){
+          buttonpressed();
+          currentState = BUTTON_DOWN;
+        }else currentState = BUTTON_UP;
+      }
+    break;
+    
+    case BUTTON_DOWN:
+      tiempo_actual = millis();
+      if(digitalRead(BUTTON_PIN)) currentState = BUTTON_RISING;
+    break;
+              
+    case BUTTON_RISING:
+      if(millis() - tiempo_actual >= DEBOUNCE_TIME){
+        tiempo_actual = millis();
+        if (digitalRead (BUTTON_PIN)){
+          currentState = BUTTON_UP;
+        }else currentState = BUTTON_DOWN;
+      }
+    break;
+  }
+}
+
+void buttonpressed(){
+  if(i<7){
+    i++; 
+    PORTD = numero[i];
+  }else if (i==7){
+    i=0;
+    PORTD = numero[i];
+  }
+}
